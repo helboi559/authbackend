@@ -3,6 +3,8 @@ var router = express.Router();
 const bcrypt = require('bcryptjs');
 const { uuid } = require('uuidv4');
 const { blogsDB } = require("../mongo");
+const dotenv = require('dotenv')
+const jwt = require('jsonwebtoken')
 
 // const passwordHash = 
 const createUser = async (username,passwordHash) => {
@@ -21,13 +23,8 @@ const createUser = async (username,passwordHash) => {
     }
     
 }
-// createUser(test,123qwe)
 
-// bcrypt.genSalt(10, function(err, salt) {
-//     bcrypt.hash("B4c0/\/", salt, function(err, hash) {
-//         // Store hash in your password DB.
-//     });
-// });
+
 router.post("/register-user",async function(req,res){
     try {
         const username = req.body.username
@@ -51,10 +48,33 @@ router.post("/login-user", async function(req,res){
           username: req.body.username
         })
         const match = await bcrypt.compare(req.body.password, user.password);
+        const jwtSecretKey = process.env.JWT_SECRET_KEY;
+        const data = {
+              time: new Date(),
+              userId: user.uid // Note: Double check this line of code to be sure that user.uid is coming from your fetched mongo user 
+          }
+        const token = jwt.sign(data, jwtSecretKey);
         // console.log(match)
-        res.json({success:match})
+        res.json({success:match, token})
     } catch(e) {
         res.status({message:String(e)})
+    }
+})
+
+router.get("/validate-token", function (req,res) {
+    const tokenHeaderKey = process.env.TOKEN_HEADER_KEY;
+    const jwtSecretKey = process.env.JWT_SECRET_KEY;
+    try {
+        const token = req.header(tokenHeaderKey)
+        console.log(token)
+        const verified = jwt.verify(token,jwtSecretKey)
+        if(verified) {
+            return res.json({success:true})
+        } else {
+            throw Error("access denied")
+        }
+    } catch(e) {
+        return res.status(401).json({success:false, message:String(e)})
     }
 })
 

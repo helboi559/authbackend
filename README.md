@@ -1,6 +1,6 @@
 # authbackend
 
-### Approach
+### Approach 1
 
 * Part 1 - Server
   * First, we will create an express server and hook it up to our mongo database.
@@ -132,3 +132,55 @@
     * Add the following code to check the users stored password with the req.body password:
       * const match = await bcrypt.compare(req.body.password, user.password);
     * Implement functionality at the end of the route to respond a json object. If the passwords match, then the object should have "success": true; if the passwords do not match, the object should have "success": false.
+  
+### Approach - Part 2A: Persistent Login
+
+* First, we will add persist login functionality with JSON Web Tokens
+* Second, we will create a new react app for our front-end
+* Third, we will create some basic pages including the registration and login page
+* Fourth, we will implement the auth flow functionality
+
+### Requirements (Back-End - JWT Implementation)
+
+* First, we will add persist login functionality with JSON Web Tokens
+
+* In the server, implement the following:
+  * In the root ./, install jsonwebtoken
+    * npm i jsonwebtoken
+  * in ./.env, add the following environment variables:
+    * JWT_SECRET_KEY = CodeImmersives2022
+    * TOKEN_HEADER_KEY = ci_token_header_key
+  * In ./routes/auth.js, implement the following:
+    * Add these three lines of code to the top of the file:
+      * const dotenv = require('dotenv');
+        const jwt = require('jsonwebtoken');
+        dotenv.config();
+    * In the "/auth/login-user" route, implement the following:
+      * Add these lines of code AFTER you fetch the user from the database and authenticate their username/password credentials using bcrypt:
+        * const jwtSecretKey = process.env.JWT_SECRET_KEY;
+          const data = {
+              time: new Date(),
+              userId: user.uid // Note: Double check this line of code to be sure that user.uid is coming from your fetched mongo user 
+          }
+          const token = jwt.sign(data, jwtSecretKey);
+      * At the end of the route, update the res.json method to send the token with the response along with the success message
+        * res.json({success: true, token})
+    * Add a new GET route "/auth/validate-token" and implement the following:
+      * Add these lines of code to the route:
+        * const tokenHeaderKey = process.env.TOKEN_HEADER_KEY;
+          const jwtSecretKey = process.env.JWT_SECRET_KEY;
+  
+          try {
+            const token = req.header(tokenHeaderKey);
+      
+            const verified = jwt.verify(token, jwtSecretKey);
+            if(verified){
+                return res.json({success: true});
+            }else{
+                // Access Denied
+                throw Error("Access Denied")
+            }
+          } catch (error) {
+            // Access Denied
+            return res.status(401).json({success: false, message: String(error)});
+          }
